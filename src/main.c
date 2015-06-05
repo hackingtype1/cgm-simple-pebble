@@ -117,12 +117,15 @@ static int hours_to_minutes(int hours_out_of_12) {
 /************************************ UI **************************************/
 void send_cmd(void) {
     
-    if (icon_bitmap) {
+    if (s_canvas_layer) {
         gbitmap_destroy(icon_bitmap);
+        text_layer_set_text(time_delta_layer, "checking...");
+        text_layer_set_text(delta_layer, "");
+        text_layer_set_text(bg_layer, "");
+        icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_REFRESH_WHITE);
+        bitmap_layer_set_bitmap(icon_layer, icon_bitmap);
     }
-    icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_REFRESH_WHITE);
-    bitmap_layer_set_bitmap(icon_layer, icon_bitmap);
-    
+
     DictionaryIterator *iter;
     app_message_outbox_begin(&iter);
     
