@@ -1,0 +1,107 @@
+{
+    "appKeys": {
+        "alert": 3,
+        "delta": 0,
+        "egv": 1,
+        "id": 5,
+        "vibe": 4,
+        "trend": 2,
+        "time_delta_int": 6
+    },
+    "capabilities": [
+        "configurable"
+    ],
+    "companyName": "Nightscout Foundation",
+    "longName": "Simple CGM",
+    "projectType": "native",
+    "resources": {
+        "media": [
+            {
+                "file": "fonts/Calibri.ttf",
+                "name": "FONT_CALIBRI_60",
+                "type": "font"
+            },
+            {
+                "file": "fonts/Calibri.ttf",
+                "name": "FONT_CALIBRI_19",
+                "type": "font"
+            },
+            {
+                "file": "fonts/Calibri Bold.ttf",
+                "name": "FONT_CALIBRI_BOLD_18",
+                "type": "font"
+            },
+            {
+                "characterRegex": "[0-9a-z]",
+                "file": "fonts/Calibri Bold.ttf",
+                "name": "FONT_CALIBRI_BOLD_54",
+                "type": "font"
+            },
+            {
+                "file": "fonts/Calibri Bold.ttf",
+                "name": "FONT_CALIBRI_BOLD_24",
+                "type": "font"
+            },
+            {
+                "file": "fonts/Ds Digital Bold.ttf",
+                "name": "FONT_DSDIGITAL_BOLD_26",
+                "type": "font"
+            },{
+                "file": "images/up.png",
+                "name": "IMAGE_UP",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/up45.png",
+                "name": "IMAGE_UP45",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/flat.png",
+                "name": "IMAGE_FLAT",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/down.png",
+                "name": "IMAGE_DOWN",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/down45.png",
+                "name": "IMAGE_DOWN45",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/refresh.png",
+                "name": "IMAGE_REFRESH",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/upup.png",
+                "name": "IMAGE_UPUP",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/none.png",
+                "name": "IMAGE_NONE",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/downdown.png",
+                "name": "IMAGE_DOWNDOWN",
+                "type": "png-trans"
+            }
+        ]
+    },
+    "sdkVersion": "3",
+    "shortName": "SimpleCGM",
+    "targetPlatforms": [
+        "basalt",
+        "aplite"
+    ],
+    "uuid": "40109bae-fbd1-429b-8088-62988dde20eb",
+    "versionLabel": "1.0",
+    "watchapp": {
+        "watchface": true
+    }
+}
