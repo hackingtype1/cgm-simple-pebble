@@ -98,6 +98,20 @@ function authenticateShare(options, defaults) {
             
         }
     };
+    
+    http.onerror = function () {
+        var now = new Date();
+        var id_time = now.getTime();
+        Pebble.sendAppMessage({
+            "vibe": 1, 	
+            "egv": 0,			
+            "trend": 0,	
+            "alert": 4,	
+            "delta": "net error",
+            "id": id_time,
+            "time_delta_int": 0,
+        });
+    };
 
     http.send(JSON.stringify(body));
 
@@ -197,6 +211,20 @@ function getShareGlucoseData(sessionId, defaults, options) {
                 "time_delta_int": 0,
             });
         }
+    };
+    
+   http.onerror = function () {
+        var now = new Date();
+        var id_time = now.getTime();
+        Pebble.sendAppMessage({
+            "vibe": 1, 	
+            "egv": 0,	
+            "trend": 0,	
+            "alert": 4,	
+            "delta": "net error",
+            "id": id_time,
+            "time_delta_int": 0,
+        });
     };
 
     http.send();
