@@ -199,6 +199,25 @@ static void clock_refresh(struct tm * tick_time) {
     
 }
 
+void accel_tap_handler(AccelAxisType axis, int32_t direction) {
+    
+    if (axis == ACCEL_AXIS_X)
+    {
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "X");
+        send_cmd();
+    } else if (axis == ACCEL_AXIS_Y)
+        
+    {
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "Y");
+        send_cmd();
+    } else if (axis == ACCEL_AXIS_Z)
+    {
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "Z");
+        send_cmd();
+    }
+    
+}
+
 static void tick_handler(struct tm * tick_time, TimeUnits changed) {
     if (!has_launched) {                 
             snprintf(time_delta_str, 12, "loading");
@@ -209,6 +228,8 @@ static void tick_handler(struct tm * tick_time, TimeUnits changed) {
     } else 
     
     if(t_delta > 3) {
+        accel_service_set_sampling_rate(ACCEL_SAMPLING_10HZ);
+        accel_tap_service_subscribe(accel_tap_handler);
         send_cmd();
     } else
     {   
@@ -604,25 +625,6 @@ static void hands_update(Animation * anim, AnimationProgress dist_normalized) {
     s_anim_time.hours = anim_percentage(dist_normalized, hours_to_minutes(s_last_time.hours));
     s_anim_time.minutes = anim_percentage(dist_normalized, s_last_time.minutes);  
     layer_mark_dirty(s_canvas_layer);
-}
-
-void accel_tap_handler(AccelAxisType axis, int32_t direction) {
-    
-    if (axis == ACCEL_AXIS_X)
-    {
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "X");
-        send_cmd();
-    } else if (axis == ACCEL_AXIS_Y)
-        
-    {
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "Y");
-        send_cmd();
-    } else if (axis == ACCEL_AXIS_Z)
-    {
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "Z");
-        send_cmd();
-    }
-    
 }
 
 static void init() {
