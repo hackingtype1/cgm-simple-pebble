@@ -18,7 +18,7 @@ static Layer * s_canvas_layer;
 
 static GPoint s_center;
 static Time s_last_time, s_anim_time;
-static int s_radius = 0, t_delta = 0, has_launched = 0, vibe_state = 1, alert_state = 0 ,s_anim_hours_60 = 0;
+static int s_radius = 0, t_delta = 0, has_launched = 0, vibe_state = 1, alert_state = 0 ,s_anim_hours_60 = 0, com_alert = 1;
 static bool s_animating = false;
 
 static GBitmap *icon_bitmap = NULL;
@@ -53,7 +53,7 @@ enum Alerts {
 static int s_color_channels[3] = { 85, 85, 85 };
 static int b_color_channels[3] = { 170, 170, 170 };
 
-static const uint32_t const error[] = { 100,100,100,100,100,100,100,100,100};
+static const uint32_t const error[] = { 100,100,100,100,100 };
 
 static const uint32_t CGM_ICONS[] = {
     RESOURCE_ID_IMAGE_NONE_WHITE,	  //4 - 0
@@ -360,7 +360,7 @@ static void process_alert() {
         s_color_channels[1] = 255;
         s_color_channels[2] = 0;
         
-     // if (vibe_state > 0)
+        if (vibe_state > 0)
             vibes_long_pulse();
             
         APP_LOG(APP_LOG_LEVEL_DEBUG, "Alert key: %i", LOSS_MID_NO_NOISE);
@@ -383,7 +383,7 @@ static void process_alert() {
         s_color_channels[1] = 0;
         s_color_channels[2] = 0;
         
-       // if (vibe_state > 0)
+       if (vibe_state > 0)
             vibes_long_pulse();
         
         APP_LOG(APP_LOG_LEVEL_DEBUG, "Alert key: %i", LOSS_HIGH_NO_NOISE);
@@ -398,7 +398,7 @@ static void process_alert() {
         s_color_channels[1] = 255;
         s_color_channels[2] = 0;
         
-        if (vibe_state > 0)
+        if (vibe_state > 1)
             vibes_double_pulse();
         
         APP_LOG(APP_LOG_LEVEL_DEBUG, "Alert key: %i", OKAY);
@@ -506,6 +506,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     //Process Alerts
     process_alert();
     has_launched = 1;
+    com_alert = 1;
     accel_tap_service_unsubscribe();
 
 }
@@ -515,7 +516,11 @@ static void inbox_dropped_callback(AppMessageResult reason, void *context) {
         .durations = error,
         .num_segments = ARRAY_LENGTH(error),
     };
-    vibes_enqueue_custom_pattern(pat);
+    
+    if (com_alert == 1) {
+        vibes_enqueue_custom_pattern(pat);
+        com_alert = 0;
+    }
     
     b_color_channels[0] = 255;
     b_color_channels[1] = 0;
@@ -531,7 +536,10 @@ static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResul
         .durations = error,
         .num_segments = ARRAY_LENGTH(error),
     };
-    vibes_enqueue_custom_pattern(pat);
+    if (com_alert == 1) {
+        vibes_enqueue_custom_pattern(pat);
+        com_alert = 0;
+    }
     
     b_color_channels[0] = 255;
     b_color_channels[1] = 0;
