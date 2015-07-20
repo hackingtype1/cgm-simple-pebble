@@ -146,7 +146,7 @@ void send_cmd(void) {
 
 static void clock_refresh(struct tm * tick_time) {
      char *time_format;
-#ifdef PBL_PLATFORM_APLITE
+// #ifdef PBL_PLATFORM_APLITE
  
     if (!tick_time) {
         time_t now = time(NULL);
@@ -169,28 +169,28 @@ static void clock_refresh(struct tm * tick_time) {
         layer_mark_dirty(s_canvas_layer);
         text_layer_set_text(time_layer, time_text);
     }
-#else
+// #else
     
-    if (!tick_time) {
-        time_t now = time(NULL);
-        tick_time = localtime(&now);
-    }
+//     if (!tick_time) {
+//         time_t now = time(NULL);
+//         tick_time = localtime(&now);
+//     }
     
-    time_format = "%B %e";
+//     time_format = "%B %e";
     
-    strftime(time_text, sizeof(time_text), time_format, tick_time);
+//     strftime(time_text, sizeof(time_text), time_format, tick_time);
     
-    if (time_text[0] == '0') {
-        memmove(time_text, &time_text[1], sizeof(time_text) - 1);
-    }
+//     if (time_text[0] == '0') {
+//         memmove(time_text, &time_text[1], sizeof(time_text) - 1);
+//     }
     
-    if (s_canvas_layer) {
-        layer_mark_dirty(s_canvas_layer);
-        text_layer_set_text(time_layer, time_text);
-    }
+//     if (s_canvas_layer) {
+//         layer_mark_dirty(s_canvas_layer);
+//         text_layer_set_text(time_layer, time_text);
+//     }
     
 
-#endif
+// #endif
     s_last_time.hours = tick_time->tm_hour;
     APP_LOG(APP_LOG_LEVEL_DEBUG, "time hours 1: %d", s_last_time.hours);
     s_last_time.hours -= (s_last_time.hours > 12) ? 12 : 0;
