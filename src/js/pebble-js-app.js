@@ -186,7 +186,7 @@ function getShareGlucoseData(sessionId, defaults, options) {
                 var timeDeltaMinutes = Math.floor(timeAgo / 60000);
                 
                 //Manage OLD data
-                if (timeDeltaMinutes > 15) {
+                if (timeDeltaMinutes >= 15) {
 					var temp_alert = 0;
 					if (timeDeltaMinutes % 5 == 0) {
 						temp_alert = 1;
@@ -197,16 +197,18 @@ function getShareGlucoseData(sessionId, defaults, options) {
 					options.vibe = temp_alert;
 					alert = 4;
                 }
-                
+				console.log("temp vibe: " + options.temp_vibe)
                 MessageQueue.sendAppMessage({
                     "delta": delta,
                     "egv": egv,	
                     "trend": trend,	
                     "alert": alert,	
-                    "vibe": options.vibe,
+                    "vibe": options.temp_vibe,
                     "id": wall.toString(),
                     "time_delta_int": timeDeltaMinutes,
                 });
+				options.id = wall.toString();
+                window.localStorage.setItem('cgmPebble_test', JSON.stringify(options));
             }
 
         } else {
@@ -223,31 +225,65 @@ function getShareGlucoseData(sessionId, defaults, options) {
     };
 
     http.send();
+	
+	http.onerror = function () {
+        var now = new Date();
+        var id_time = now.getTime();
+        MessageQueue.sendAppMessage({
+            "vibe": 1,
+            "egv": 0,
+            "trend": 0,
+            "alert": 4,
+            "delta": "net-err",
+            "id": id_time,
+            "time_delta_int": 0,
+        });
+    };
+   http.ontimeout = function () {
+        var now = new Date();
+        var id_time = now.getTime();
+        MessageQueue.sendAppMessage({
+            "vibe": 1,
+            "egv": 0,
+            "trend": 0,
+            "alert": 4,
+            "delta": "tout-err",
+            "id": id_time,
+            "time_delta_int": 0,
+        });
+    };
 }
 
 function calculateShareAlert(egv, currentId, options) {
 	console.log("egv: " + egv);
 	console.log("currentId: " + currentId);
+	console.log("lastId: " + options.id);
 	console.log("options: " + options);
 
     if (parseInt(options.id, 10) == parseInt(currentId, 10)) {
         
-		options.vibe = 0;
+		options.temp_vibe = 0;
 		
 		if (egv <= options.low)
         	return 2;
 		else if (egv >= options.high)
         	return 1;
 		else
-        	return 3;
-    }
-
-    if (egv <= options.low)
-        return 2;
-
-    if (egv >= options.high)
-        return 1;
+        	return 0;
+    } 
+	
+    if (egv <= options.low) {
+		options.temp_vibe = 1;
+		return 2;
+	}
         
+
+    if (egv >= options.high) {
+		options.temp_vibe = 1;
+		return 1;
+	}
+        
+    options.temp_vibe = options.vibe;   
 	//new EGV, but within range
     return 0;
 }
@@ -286,12 +322,12 @@ function nightscout(options) {
 				var timeAgo = now.getTime() - data.bgs[0].datetime;
 				var timeDeltaMinutes = Math.floor(timeAgo / 60000);
              	
-				var alert = calculateNSAlert(parseInt(data.bgs[0].sgv), data.bgs[0].datetime.toString(), options);
+				var alert = calculateShareAlert(parseInt(data.bgs[0].sgv), data.bgs[0].datetime.toString(), options);
 				console.log("alert: " + alert);
 				console.log("vibe: " + options.vibe);
 				
 				//Manage OLD data
-                if (timeDeltaMinutes > 15) {
+                if (timeDeltaMinutes >= 15) {
 					var temp_alert = 0;
 					if (timeDeltaMinutes % 5 == 0) {
 						temp_alert = 1;
@@ -315,7 +351,7 @@ function nightscout(options) {
                     "egv": data.bgs[0].sgv,		//int	
                     "trend": data.bgs[0].trend,	//int
                     "alert": alert,	//int
-                    "vibe": options.vibe,
+                    "vibe": options.temp_vibe,
                     "id": data.bgs[0].datetime.toString(),
                     "time_delta_int": timeDeltaMinutes,
                 });
@@ -368,36 +404,6 @@ function nightscout(options) {
             "time_delta_int": 0,
         });
     };
-
-}
-
-function calculateNSAlert(egv, currentId, options) {
-	console.log("egv: " + egv);
-	console.log("currentId: " + currentId);
-	console.log("options.id: " + options.id);
-	console.log("low: " + options.low);
-	console.log("high: " + options.high);
-
- 	if (parseInt(options.id, 10) == parseInt(currentId, 10)) {
-        
-		options.vibe = 0;
-		
-		if (egv <= options.low)
-        	return 2;
-		else if (egv >= options.high)
-        	return 1;
-		else
-        	return 3;
-    }
-
-    if (egv <= options.low)
-        return 2;
-
-    if (egv >= options.high)
-        return 1;
-        
-	//new EGV, but within range
-    return 0;
 
 }
 
