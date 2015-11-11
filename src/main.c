@@ -53,7 +53,7 @@ enum Alerts {
 static int s_color_channels[3] = { 85, 85, 85 };
 static int b_color_channels[3] = { 170, 170, 170 };
 
-static const uint32_t const error[] = { 100,100,100,100,100,100,100,100,100};
+static const uint32_t const error[] = { 100,100,100,100,100 };
 
 static const uint32_t CGM_ICONS[] = {
     RESOURCE_ID_IMAGE_NONE_WHITE,	  //4 - 0
@@ -191,7 +191,7 @@ static void tick_handler(struct tm * tick_time, TimeUnits changed) {
             }
     } else 
     
-    if(t_delta > 3) {
+    if(t_delta > 4) {
         send_cmd();
     } else
     {   
@@ -331,7 +331,7 @@ static void process_alert() {
         s_color_channels[1] = 255;
         s_color_channels[2] = 0;
         
-     // if (vibe_state > 0)
+     	if (vibe_state > 0)
             vibes_long_pulse();
             
         APP_LOG(APP_LOG_LEVEL_DEBUG, "Alert key: %i", LOSS_MID_NO_NOISE);
@@ -354,7 +354,7 @@ static void process_alert() {
         s_color_channels[1] = 0;
         s_color_channels[2] = 0;
         
-       // if (vibe_state > 0)
+       if (vibe_state > 0)
             vibes_long_pulse();
         
         APP_LOG(APP_LOG_LEVEL_DEBUG, "Alert key: %i", LOSS_HIGH_NO_NOISE);
@@ -385,7 +385,8 @@ static void process_alert() {
             .num_segments = ARRAY_LENGTH(error),
         };
         
-        vibes_enqueue_custom_pattern(pat);
+		if (vibe_state > 0)
+        	vibes_enqueue_custom_pattern(pat);
         APP_LOG(APP_LOG_LEVEL_DEBUG, "Alert key: %i", OLD_DATA);
         
         s_color_channels[0] = 0;

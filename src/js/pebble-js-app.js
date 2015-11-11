@@ -11,8 +11,6 @@ function fetchCgmData(id) {
             'vibe' : 1
         };
 
-	
-
     switch (options.mode) {
         case "Rogue":
             options.id = id;
@@ -20,6 +18,7 @@ function fetchCgmData(id) {
             break;
 
         case "Nightscout":
+			options.id = id;
 			console.log("nightscout mode");
             nightscout(options);
             break;
@@ -56,7 +55,10 @@ function share(options) {
         options.conversion = 1;
         options.unit = "mg/dL";
         
-    } else {
+    } else if (options.unit == "mg/dL") {
+		options.conversion = 1;
+        options.unit = "mg/dL";	
+	} else {
         options.conversion = .0555;       
         options.unit = "mmol/l";
     }
@@ -101,7 +103,7 @@ function authenticateShare(options, defaults) {
             console.log("login error");
                 var now = new Date();
                 var id_time = now.getTime();
-                Pebble.sendAppMessage({
+                MessageQueue.sendAppMessage({
                     "vibe": 1, 	
                     "egv": 0,		
                     "trend": 0,	
@@ -138,7 +140,7 @@ function getShareGlucoseData(sessionId, defaults, options) {
             //handle arrays less than 2 in length
             if (data.length == 0) {
                 
-                Pebble.sendAppMessage({
+                MessageQueue.sendAppMessage({
                     "delta": "data error", 	
                     "egv": "",			
                     "trend": 0,	
@@ -185,12 +187,18 @@ function getShareGlucoseData(sessionId, defaults, options) {
                 
                 //Manage OLD data
                 if (timeDeltaMinutes > 15) {
+					var temp_alert = 0;
+					if (timeDeltaMinutes % 5 == 0) {
+						temp_alert = 1;
+					}
                     delta = "no data";
                     trend = 0;
                     egv = "old";
+					options.vibe = temp_alert;
+					alert = 4;
                 }
                 
-                Pebble.sendAppMessage({
+                MessageQueue.sendAppMessage({
                     "delta": delta,
                     "egv": egv,	
                     "trend": trend,	
@@ -202,7 +210,7 @@ function getShareGlucoseData(sessionId, defaults, options) {
             }
 
         } else {
-            Pebble.sendAppMessage({
+            MessageQueue.sendAppMessage({
                 "delta": "data error",
                 "egv": "",
                 "trend": 0,
@@ -218,10 +226,20 @@ function getShareGlucoseData(sessionId, defaults, options) {
 }
 
 function calculateShareAlert(egv, currentId, options) {
+	console.log("egv: " + egv);
+	console.log("currentId: " + currentId);
+	console.log("options: " + options);
 
     if (parseInt(options.id, 10) == parseInt(currentId, 10)) {
-        options.vibe = 0;
-        return 3;
+        
+		options.vibe = 0;
+		
+		if (egv <= options.low)
+        	return 2;
+		else if (egv >= options.high)
+        	return 1;
+		else
+        	return 3;
     }
 
     if (egv <= options.low)
@@ -243,6 +261,19 @@ function nightscout(options) {
 	var now = new Date();
     var id_time = now.getTime();
 	
+	if (options.unit == "mgdl")
+    {
+        options.conversion = 1;
+        options.unit = "mg/dL";
+        
+    } else if (options.unit == "mg/dL") {
+		options.conversion = 1;
+        options.unit = "mg/dL";	
+	} else {
+        options.conversion = .0555;       
+        options.unit = "mmol/l";
+    }
+	
     req.open('GET', options.api, true);
 
     req.onload = function (e) {
@@ -255,23 +286,46 @@ function nightscout(options) {
 				var timeAgo = now.getTime() - data.bgs[0].datetime;
 				var timeDeltaMinutes = Math.floor(timeAgo / 60000);
              	
-				var alert = calculateShareAlert(data.bgs[0].sgv, data.bgs[0].datetime.toString(), options);      
-
-                Pebble.sendAppMessage({
-                    "delta": data.bgs[0].bgdelta.toString() + "mg/dL", 	//str
+				var alert = calculateNSAlert(parseInt(data.bgs[0].sgv), data.bgs[0].datetime.toString(), options);
+				console.log("alert: " + alert);
+				console.log("vibe: " + options.vibe);
+				
+				//Manage OLD data
+                if (timeDeltaMinutes > 15) {
+					var temp_alert = 0;
+					if (timeDeltaMinutes % 5 == 0) {
+						temp_alert = 1;
+					}
+					console.log("temp alert: " + temp_alert)
+					MessageQueue.sendAppMessage({
+                    "delta": "no data", 	//str
+                    "egv": "old",		//int	
+                    "trend": 0,	//int
+                    "alert": 4,	//int
+                    "vibe": temp_alert,
+                    "id": data.bgs[0].datetime.toString(),
+                    "time_delta_int": timeDeltaMinutes,
+                });
+				
+                } else {
+				
+				
+                MessageQueue.sendAppMessage({
+                    "delta": data.bgs[0].bgdelta.toString() + options.unit, 	//str
                     "egv": data.bgs[0].sgv,		//int	
                     "trend": data.bgs[0].trend,	//int
                     "alert": alert,	//int
-                    "vibe": parseInt(options.vibe_temp,10),
-                    "id": data.status[0].now.toString(),
+                    "vibe": options.vibe,
+                    "id": data.bgs[0].datetime.toString(),
                     "time_delta_int": timeDeltaMinutes,
                 });
-                options.id = data.status[0].now.toString();
-                window.localStorage.setItem('cgmPebble', JSON.stringify(options));
+				}
+                options.id = data.bgs[0].datetime.toString();
+                window.localStorage.setItem('cgmPebble_test', JSON.stringify(options));
             } else {
 
-                Pebble.sendAppMessage({
-                    "delta": 'must code.', 	//str
+                MessageQueue.sendAppMessage({
+                    "delta": 'error', 	//str
                     "egv": 0,		//int	
                     "trend": 0,	//int
                     "alert": 4,	//in
@@ -291,7 +345,7 @@ function nightscout(options) {
 	req.onerror = function () {
         var now = new Date();
         var id_time = now.getTime();
-        Pebble.sendAppMessage({
+        MessageQueue.sendAppMessage({
             "vibe": 1,
             "egv": 0,
             "trend": 0,
@@ -304,7 +358,7 @@ function nightscout(options) {
    req.ontimeout = function () {
         var now = new Date();
         var id_time = now.getTime();
-        Pebble.sendAppMessage({
+        MessageQueue.sendAppMessage({
             "vibe": 1,
             "egv": 0,
             "trend": 0,
@@ -314,6 +368,36 @@ function nightscout(options) {
             "time_delta_int": 0,
         });
     };
+
+}
+
+function calculateNSAlert(egv, currentId, options) {
+	console.log("egv: " + egv);
+	console.log("currentId: " + currentId);
+	console.log("options.id: " + options.id);
+	console.log("low: " + options.low);
+	console.log("high: " + options.high);
+
+ 	if (parseInt(options.id, 10) == parseInt(currentId, 10)) {
+        
+		options.vibe = 0;
+		
+		if (egv <= options.low)
+        	return 2;
+		else if (egv >= options.high)
+        	return 1;
+		else
+        	return 3;
+    }
+
+    if (egv <= options.low)
+        return 2;
+
+    if (egv >= options.high)
+        return 1;
+        
+	//new EGV, but within range
+    return 0;
 
 }
 
@@ -349,7 +433,7 @@ var response;
                      
                 var trend = (response[0].trend > 7) ? 0 : response[0].trend;       
 
-                Pebble.sendAppMessage({
+                MessageQueue.sendAppMessage({
                     "delta": response[0].bgdelta.toString() + "mg/dL", 	//str
                     "egv": egv,		//int	
                     "trend": trend,	//int
@@ -359,7 +443,7 @@ var response;
                     "time_delta_int": Math.floor(response[0].timesinceread),
                 });
                 options.id = response[0].id.toString();
-                window.localStorage.setItem('cgmPebble', JSON.stringify(options));
+                window.localStorage.setItem('cgmPebble_test', JSON.stringify(options));
             } else {
                 Pebble.sendAppMessage({
                     "delta": 'must code.', 	//str
@@ -392,10 +476,159 @@ Pebble.addEventListener("webviewclosed", function (e) {
 
 Pebble.addEventListener("ready",
     function (e) {
-        fetchCgmData(99);
+        var options = JSON.parse(window.localStorage.getItem('cgmPebble_test')) || 
+        {   'mode': 'Share' ,
+            'high': 180,
+            'low' : 80,
+            'unit': 'mgdL',
+            'accountName': '',
+            'password': '' ,
+            'api' : '',
+            'vibe' : 1,
+            'id' : 99,
+        };     
+        fetchCgmData(options.id);
     });
 
 Pebble.addEventListener("appmessage",
     function (e) {
         fetchCgmData(e.payload.id);
     });
+
+// message queue-ing to pace calls from C function on watch
+var MessageQueue = (
+    function () {
+
+        var RETRY_MAX = 5;
+
+        var queue = [];
+        var sending = false;
+        var timer = null;
+
+        return {
+            reset: reset,
+            sendAppMessage: sendAppMessage,
+            size: size
+        };
+
+        function reset() {
+            queue = [];
+            sending = false;
+        }
+
+        function sendAppMessage(message, ack, nack) {
+
+            if (!isValidMessage(message)) {
+                return false;
+            }
+
+            queue.push({
+                message: message,
+                ack: ack || null,
+                nack: nack || null,
+                attempts: 0
+            });
+
+            setTimeout(function () {
+                sendNextMessage();
+            }, 1);
+
+            return true;
+        }
+
+        function size() {
+            return queue.length;
+        }
+
+        function isValidMessage(message) {
+            // A message must be an object.
+            if (message !== Object(message)) {
+                return false;
+            }
+            var keys = Object.keys(message);
+            // A message must have at least one key.
+            if (!keys.length) {
+                return false;
+            }
+            for (var k = 0; k < keys.length; k += 1) {
+                var validKey = /^[0-9a-zA-Z-_]*$/.test(keys[k]);
+                if (!validKey) {
+                    return false;
+                }
+                var value = message[keys[k]];
+                if (!validValue(value)) {
+                    return false;
+                }
+            }
+
+            return true;
+
+            function validValue(value) {
+                switch (typeof (value)) {
+                    case 'string':
+                        return true;
+                    case 'number':
+                        return true;
+                    case 'object':
+                        if (toString.call(value) == '[object Array]') {
+                            return true;
+                        }
+                }
+                return false;
+            }
+        }
+
+        function sendNextMessage() {
+
+            if (sending) { return; }
+            var message = queue.shift();
+            if (!message) { return; }
+
+            message.attempts += 1;
+            sending = true;
+            Pebble.sendAppMessage(message.message, ack, nack);
+
+            timer = setTimeout(function () {
+                timeout();
+            }, 1000);
+
+            function ack() {
+                clearTimeout(timer);
+                setTimeout(function () {
+                    sending = false;
+                    sendNextMessage();
+                }, 200);
+                if (message.ack) {
+                    message.ack.apply(null, arguments);
+                }
+            }
+
+            function nack() {
+                clearTimeout(timer);
+                if (message.attempts < RETRY_MAX) {
+                    queue.unshift(message);
+                    setTimeout(function () {
+                        sending = false;
+                        sendNextMessage();
+                    }, 200 * message.attempts);
+                }
+                else {
+                    if (message.nack) {
+                        message.nack.apply(null, arguments);
+                    }
+                }
+            }
+
+            function timeout() {
+                setTimeout(function () {
+                    sending = false;
+                    sendNextMessage();
+                }, 1000);
+                if (message.ack) {
+                    message.ack.apply(null, arguments);
+                }
+            }
+
+        }
+
+    } ());

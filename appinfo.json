@@ -12,7 +12,7 @@
         "configurable"
     ],
     "companyName": "John Costik",
-    "longName": "Simple CGM",
+    "longName": "Simple CGM Beta",
     "projectType": "native",
     "resources": {
         "media": [
@@ -95,14 +95,14 @@
         ]
     },
     "sdkVersion": "3",
-    "shortName": "SimpleCGM",
+    "shortName": "SimpleCGMBETA",
     "targetPlatforms": [
         "aplite",
         "basalt",
         "chalk"
     ],
-    "uuid": "16279b96-4a52-4482-8b0b-580ce2e10b36",
-    "versionLabel": "1.6",
+    "uuid": "5c5cae77-891d-4662-b20a-fd032fc6ee35",
+    "versionLabel": "1.9",
     "watchapp": {
         "watchface": true
     }
