@@ -18,7 +18,7 @@ static Layer * s_canvas_layer;
 
 static GPoint s_center;
 static Time s_last_time, s_anim_time;
-static int s_radius = 0, t_delta = 0, has_launched = 0, vibe_state = 1, alert_state = 0 ,s_anim_hours_60 = 0, com_alert = 1;
+static int s_radius = 0, t_delta = 0, has_launched = 0, vibe_state = 1, alert_state = 0 ,s_anim_hours_60 = 0;
 static bool s_animating = false;
 
 static GBitmap *icon_bitmap = NULL;
@@ -53,7 +53,7 @@ enum Alerts {
 static int s_color_channels[3] = { 85, 85, 85 };
 static int b_color_channels[3] = { 170, 170, 170 };
 
-static const uint32_t const error[] = { 100,100,100,100,100 };
+static const uint32_t const error[] = { 100,100,100,100,100,100,100,100,100};
 
 static const uint32_t CGM_ICONS[] = {
     RESOURCE_ID_IMAGE_NONE_WHITE,	  //4 - 0
@@ -117,15 +117,12 @@ static int hours_to_minutes(int hours_out_of_12) {
 /************************************ UI **************************************/
 void send_cmd(void) {
     
-    if (s_canvas_layer) {
+    if (icon_bitmap) {
         gbitmap_destroy(icon_bitmap);
-        text_layer_set_text(time_delta_layer, "checking...");
-        text_layer_set_text(delta_layer, "");
-        text_layer_set_text(bg_layer, "");
-        icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_REFRESH_WHITE);
-        bitmap_layer_set_bitmap(icon_layer, icon_bitmap);
     }
-
+    icon_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_REFRESH_WHITE);
+    bitmap_layer_set_bitmap(icon_layer, icon_bitmap);
+    
     DictionaryIterator *iter;
     app_message_outbox_begin(&iter);
     
@@ -146,18 +143,25 @@ void send_cmd(void) {
 
 static void clock_refresh(struct tm * tick_time) {
      char *time_format;
-// #ifdef PBL_PLATFORM_APLITE
  
     if (!tick_time) {
         time_t now = time(NULL);
         tick_time = localtime(&now);
     }
     
+	#ifdef PBL_PLATFORM_CHALK
     if (clock_is_24h_style()) {
+        time_format = "%H:%M  %B %e";
+    } else {
+        time_format = "%I:%M  %B %e";
+    }
+	#else
+	    if (clock_is_24h_style()) {
         time_format = "%H:%M  %m/%d";
     } else {
         time_format = "%I:%M  %m/%d";
     }
+	#endif
     
     strftime(time_text, sizeof(time_text), time_format, tick_time);
     
@@ -169,52 +173,12 @@ static void clock_refresh(struct tm * tick_time) {
         layer_mark_dirty(s_canvas_layer);
         text_layer_set_text(time_layer, time_text);
     }
-// #else
-    
-//     if (!tick_time) {
-//         time_t now = time(NULL);
-//         tick_time = localtime(&now);
-//     }
-    
-//     time_format = "%B %e";
-    
-//     strftime(time_text, sizeof(time_text), time_format, tick_time);
-    
-//     if (time_text[0] == '0') {
-//         memmove(time_text, &time_text[1], sizeof(time_text) - 1);
-//     }
-    
-//     if (s_canvas_layer) {
-//         layer_mark_dirty(s_canvas_layer);
-//         text_layer_set_text(time_layer, time_text);
-//     }
-    
 
-// #endif
     s_last_time.hours = tick_time->tm_hour;
     APP_LOG(APP_LOG_LEVEL_DEBUG, "time hours 1: %d", s_last_time.hours);
     s_last_time.hours -= (s_last_time.hours > 12) ? 12 : 0;
     APP_LOG(APP_LOG_LEVEL_DEBUG, "time hours 2: %d", s_last_time.hours);
     s_last_time.minutes = tick_time->tm_min;
-    
-}
-
-void accel_tap_handler(AccelAxisType axis, int32_t direction) {
-    
-    if (axis == ACCEL_AXIS_X)
-    {
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "X");
-        send_cmd();
-    } else if (axis == ACCEL_AXIS_Y)
-        
-    {
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "Y");
-        send_cmd();
-    } else if (axis == ACCEL_AXIS_Z)
-    {
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "Z");
-        send_cmd();
-    }
     
 }
 
@@ -228,8 +192,6 @@ static void tick_handler(struct tm * tick_time, TimeUnits changed) {
     } else 
     
     if(t_delta > 3) {
-        accel_service_set_sampling_rate(ACCEL_SAMPLING_10HZ);
-        accel_tap_service_subscribe(accel_tap_handler);
         send_cmd();
     } else
     {   
@@ -252,8 +214,17 @@ static void tick_handler(struct tm * tick_time, TimeUnits changed) {
     
 }
 static void update_proc(Layer * layer, GContext * ctx) {
+	
+#ifdef PBL_PLATFORM_CHALK
 
-#ifdef PBL_PLATFORM_BASALT
+    graphics_context_set_fill_color(ctx, GColorFromRGB(b_color_channels[0], b_color_channels[1], b_color_channels[2]));
+    graphics_fill_rect(ctx, GRect(0, 0, 180, 50), 0, GCornerNone);
+	
+	graphics_context_set_fill_color(ctx, GColorFromRGB(s_color_channels[0], s_color_channels[1], s_color_channels[2]));
+    graphics_fill_rect(ctx, GRect(0, 51, 180, 129), 0, GCornerNone);
+    
+
+#elif PBL_PLATFORM_BASALT
 
     graphics_context_set_fill_color(ctx, GColorFromRGB(b_color_channels[0], b_color_channels[1], b_color_channels[2]));
     graphics_fill_rect(ctx, GRect(0, 0, 144, 168), 0, GCornerNone);
@@ -360,7 +331,7 @@ static void process_alert() {
         s_color_channels[1] = 255;
         s_color_channels[2] = 0;
         
-        if (vibe_state > 0)
+     // if (vibe_state > 0)
             vibes_long_pulse();
             
         APP_LOG(APP_LOG_LEVEL_DEBUG, "Alert key: %i", LOSS_MID_NO_NOISE);
@@ -383,7 +354,7 @@ static void process_alert() {
         s_color_channels[1] = 0;
         s_color_channels[2] = 0;
         
-       if (vibe_state > 0)
+       // if (vibe_state > 0)
             vibes_long_pulse();
         
         APP_LOG(APP_LOG_LEVEL_DEBUG, "Alert key: %i", LOSS_HIGH_NO_NOISE);
@@ -398,7 +369,7 @@ static void process_alert() {
         s_color_channels[1] = 255;
         s_color_channels[2] = 0;
         
-        if (vibe_state > 1)
+        if (vibe_state > 0)
             vibes_double_pulse();
         
         APP_LOG(APP_LOG_LEVEL_DEBUG, "Alert key: %i", OKAY);
@@ -506,7 +477,6 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     //Process Alerts
     process_alert();
     has_launched = 1;
-    com_alert = 1;
     accel_tap_service_unsubscribe();
 
 }
@@ -516,11 +486,7 @@ static void inbox_dropped_callback(AppMessageResult reason, void *context) {
         .durations = error,
         .num_segments = ARRAY_LENGTH(error),
     };
-    
-    if (com_alert == 1) {
-        vibes_enqueue_custom_pattern(pat);
-        com_alert = 0;
-    }
+    vibes_enqueue_custom_pattern(pat);
     
     b_color_channels[0] = 255;
     b_color_channels[1] = 0;
@@ -536,10 +502,7 @@ static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResul
         .durations = error,
         .num_segments = ARRAY_LENGTH(error),
     };
-    if (com_alert == 1) {
-        vibes_enqueue_custom_pattern(pat);
-        com_alert = 0;
-    }
+    vibes_enqueue_custom_pattern(pat);
     
     b_color_channels[0] = 255;
     b_color_channels[1] = 0;
@@ -558,18 +521,46 @@ static void window_load(Window * window) {
     
     Layer * window_layer = window_get_root_layer(window);
     GRect window_bounds = layer_get_bounds(window_layer);
-    
-#ifdef PBL_PLATFORM_BASALT
-    //s_center = grect_center_point(&window_bounds);
-    //int offset = 0;
-    int offset = 24/2;
-    GRect inner_bounds = GRect(0, 24, 144, 144);
+#ifdef PBL_PLATFORM_CHALK
+	int offset = 24/2 + 14;
+    GRect inner_bounds = GRect(0, 0, 180, 180);
     s_center = grect_center_point(&inner_bounds);
+	
+	s_canvas_layer = layer_create(window_bounds);
+    layer_set_update_proc(s_canvas_layer, update_proc);
+    layer_add_child(window_layer, s_canvas_layer);
+    
+    icon_layer = bitmap_layer_create(GRect(102 + 20, 67 + offset, 30, 30));
+    bitmap_layer_set_background_color(icon_layer, GColorClear);
+    bitmap_layer_set_compositing_mode(icon_layer, GCompOpClear);
+    layer_add_child(s_canvas_layer, bitmap_layer_get_layer(icon_layer));
+
+    bg_layer = text_layer_create(GRect(5 + 20, 42+offset, 104, 76));
+    text_layer_set_text_color(bg_layer, GColorBlack);
+    text_layer_set_background_color(bg_layer, GColorClear);
+    text_layer_set_font(bg_layer, fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CALIBRI_60)));
+    text_layer_set_text_alignment(bg_layer, GTextAlignmentCenter);
+    layer_add_child(s_canvas_layer, text_layer_get_layer(bg_layer));
+  
+    delta_layer = text_layer_create(GRect(26 + 20, 111+offset, 90, 48));
+    text_layer_set_text_color(delta_layer, GColorBlack);
+    text_layer_set_background_color(delta_layer, GColorClear);
+    text_layer_set_font(delta_layer, fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CALIBRI_19)));
+    text_layer_set_text_alignment(delta_layer, GTextAlignmentCenter);
+    layer_add_child(s_canvas_layer, text_layer_get_layer(delta_layer));
+
+    time_delta_layer = text_layer_create(GRect(26 + 20, 30+offset, 90, 48));
+    text_layer_set_text_color(time_delta_layer, GColorBlack);
+    text_layer_set_background_color(time_delta_layer, GColorClear);
+    text_layer_set_font(time_delta_layer, fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CALIBRI_19)));
+    text_layer_set_text_alignment(time_delta_layer, GTextAlignmentCenter);
+    layer_add_child(s_canvas_layer, text_layer_get_layer(time_delta_layer));
+
 #else
     int offset = 24/2;
     GRect inner_bounds = GRect(0, 24, 144, 144);
     s_center = grect_center_point(&inner_bounds);
-#endif
+
     s_canvas_layer = layer_create(window_bounds);
     layer_set_update_proc(s_canvas_layer, update_proc);
     layer_add_child(window_layer, s_canvas_layer);
@@ -599,13 +590,22 @@ static void window_load(Window * window) {
     text_layer_set_font(time_delta_layer, fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CALIBRI_19)));
     text_layer_set_text_alignment(time_delta_layer, GTextAlignmentCenter);
     layer_add_child(s_canvas_layer, text_layer_get_layer(time_delta_layer));
-    
-    time_layer = text_layer_create(GRect(0, 0, 144, 26));
+#endif    
+
+#ifdef PBL_PLATFORM_CHALK
+	time_layer = text_layer_create(GRect(32, 8, 120, 50));
     text_layer_set_text_color(time_layer, GColorBlack);
     text_layer_set_background_color(time_layer, GColorClear);
-#ifdef PBL_PLATFORM_BASALT
     text_layer_set_font(time_layer, fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CALIBRI_19)));
+#elif PBL_PLATFORM_BASALT
+	time_layer = text_layer_create(GRect(0, 0, 144, 26));
+    text_layer_set_text_color(time_layer, GColorBlack);
+    text_layer_set_background_color(time_layer, GColorClear);
+	text_layer_set_font(time_layer, fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CALIBRI_19)));
 #else
+	time_layer = text_layer_create(GRect(0, 0, 144, 26));
+    text_layer_set_text_color(time_layer, GColorBlack);
+    text_layer_set_background_color(time_layer, GColorClear);
     text_layer_set_font(time_layer, fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_CALIBRI_BOLD_24)));
 #endif    
     
@@ -625,7 +625,11 @@ static int anim_percentage(AnimationProgress dist_normalized, int max) {
 }
 
 static void radius_update(Animation * anim, AnimationProgress dist_normalized) {
-    s_radius = anim_percentage(dist_normalized, FINAL_RADIUS);   
+	#ifdef PBL_PLATFORM_CHALK
+	s_radius = anim_percentage(dist_normalized, 86);   
+	#else
+    s_radius = anim_percentage(dist_normalized, FINAL_RADIUS); 
+	#endif
     layer_mark_dirty(s_canvas_layer);
 }
 
@@ -633,6 +637,25 @@ static void hands_update(Animation * anim, AnimationProgress dist_normalized) {
     s_anim_time.hours = anim_percentage(dist_normalized, hours_to_minutes(s_last_time.hours));
     s_anim_time.minutes = anim_percentage(dist_normalized, s_last_time.minutes);  
     layer_mark_dirty(s_canvas_layer);
+}
+
+void accel_tap_handler(AccelAxisType axis, int32_t direction) {
+    
+    if (axis == ACCEL_AXIS_X)
+    {
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "X");
+        send_cmd();
+    } else if (axis == ACCEL_AXIS_Y)
+        
+    {
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "Y");
+        send_cmd();
+    } else if (axis == ACCEL_AXIS_Z)
+    {
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "Z");
+        send_cmd();
+    }
+    
 }
 
 static void init() {

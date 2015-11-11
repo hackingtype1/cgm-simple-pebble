@@ -1,38 +1,18 @@
-
-
 function fetchCgmData(id) {
-   var options = JSON.parse(window.localStorage.getItem('cgmPebble')) || 
-        {   'mode': 'Share' ,
+
+    var options = JSON.parse(window.localStorage.getItem('cgmPebble_test')) || 
+        {   'mode': 'Unset',
             'high': 180,
             'low' : 80,
             'unit': 'mg/dL',
             'accountName': '',
             'password': '' ,
             'api' : '',
-            'vibe' : 1,
+            'vibe' : 1
         };
-        
-        try { 
-            Pebble.getTimelineToken(
-                function (token) {
-                    console.log('My timeline token is ' + token);
-                },
-                function (error) {
-                    console.log('Error getting timeline token: ' + error);
-                }
-                );
-            Pebble.timelineSubscribe(options.accountName,
-                function () {
-                    console.log('Subscribed to' + options.accountName);
-                },
-                function (errorString) {
-                    console.log('Error subscribing to topic: ' + errorString);
-                }
-                );
-        } catch (err) {
-            console.log('Error: ' + err.message);
-        }
-        
+
+	
+
     switch (options.mode) {
         case "Rogue":
             options.id = id;
@@ -40,6 +20,7 @@ function fetchCgmData(id) {
             break;
 
         case "Nightscout":
+			console.log("nightscout mode");
             nightscout(options);
             break;
 
@@ -47,6 +28,18 @@ function fetchCgmData(id) {
             options.id = id;
             share(options);
             break;
+			
+		case "Unset":
+			Pebble.sendAppMessage({
+                "delta": "settings??",
+                "egv": "",
+                "trend": 0,
+                "alert": 5,
+                "vibe": 0,
+                "id": 0,
+                "time_delta_int": 0,
+            });
+			break;
     }
 }
 
@@ -58,7 +51,7 @@ function nightscout(options) {
 //use D's share API------------------------------------------//
 function share(options) {
 
-    if (options.unit == "mgdl" || options.unit == "mg/dL")
+    if (options.unit == "mgdl")
     {
         options.conversion = 1;
         options.unit = "mg/dL";
@@ -67,7 +60,7 @@ function share(options) {
         options.conversion = .0555;       
         options.unit = "mmol/l";
     }
-    console.log(JSON.stringify(options));
+    
     //convert, set data types
     //options.high = parseInt(options.high, 10) * options.conversion;
     //options.low = parseInt(options.low, 10) * options.conversion;
@@ -120,20 +113,6 @@ function authenticateShare(options, defaults) {
             
         }
     };
-    
-    http.onerror = function () {
-        var now = new Date();
-        var id_time = now.getTime();
-        Pebble.sendAppMessage({
-            "vibe": 1, 	
-            "egv": 0,			
-            "trend": 0,	
-            "alert": 4,	
-            "delta": "net error",
-            "id": id_time,
-            "time_delta_int": 0,
-        });
-    };
 
     http.send(JSON.stringify(body));
 
@@ -174,7 +153,7 @@ function getShareGlucoseData(sessionId, defaults, options) {
                 var regex = /\((.*)\)/;
                 var wall = parseInt(data[0].WT.match(regex)[1]);
                 var timeAgo = now.getTime() - wall;       
-
+                var alert = calculateShareAlert(data[0].Value, wall.toString(), options);
                 var egv, delta, trend, convertedDelta;
 
                 if (data.length == 1) {
@@ -200,9 +179,8 @@ function getShareGlucoseData(sessionId, defaults, options) {
                     delta = (convertedEgv < 39) ? parseFloat(Math.round(convertedDelta * 100) / 100).toFixed(1) : convertedDelta;
                     delta = delta.toString() + options.unit;
                     trend = (data[0].Trend > 7) ? 0 : data[0].Trend;
-                    options.egv = data[0].Value;
                 }
-                var alert = calculateShareAlert(data[0].Value, wall.toString(), options);
+                
                 var timeDeltaMinutes = Math.floor(timeAgo / 60000);
                 
                 //Manage OLD data
@@ -212,18 +190,15 @@ function getShareGlucoseData(sessionId, defaults, options) {
                     egv = "old";
                 }
                 
-                console.log("vibe_temp: " + options.vibe_temp);
                 Pebble.sendAppMessage({
                     "delta": delta,
                     "egv": egv,	
                     "trend": trend,	
                     "alert": alert,	
-                    "vibe": options.vibe_temp,
+                    "vibe": options.vibe,
                     "id": wall.toString(),
                     "time_delta_int": timeDeltaMinutes,
                 });
-                options.id = wall.toString();
-                window.localStorage.setItem('cgmPebble', JSON.stringify(options));
             }
 
         } else {
@@ -238,20 +213,6 @@ function getShareGlucoseData(sessionId, defaults, options) {
             });
         }
     };
-    
-   http.onerror = function () {
-        var now = new Date();
-        var id_time = now.getTime();
-        Pebble.sendAppMessage({
-            "vibe": 1, 	
-            "egv": 0,	
-            "trend": 0,	
-            "alert": 4,	
-            "delta": "net error",
-            "id": id_time,
-            "time_delta_int": 0,
-        });
-    };
 
     http.send();
 }
@@ -259,51 +220,179 @@ function getShareGlucoseData(sessionId, defaults, options) {
 function calculateShareAlert(egv, currentId, options) {
 
     if (parseInt(options.id, 10) == parseInt(currentId, 10)) {
-        options.vibe_temp = 0;
-    } else {
-        options.vibe_temp = options.vibe + 1;
+        options.vibe = 0;
+        return 3;
     }
 
-    if (egv <= options.low){
+    if (egv <= options.low)
         return 2;
-    }
 
-    if (egv >= options.high) {
+    if (egv >= options.high)
         return 1;
-    }
         
+	//new EGV, but within range
     return 0;
 }
 
+
+
+//---------Nightscout---------------------//
+function nightscout(options) {
+	
+	var req = new XMLHttpRequest();
+	var now = new Date();
+    var id_time = now.getTime();
+	
+    req.open('GET', options.api, true);
+
+    req.onload = function (e) {
+        console.log(req.readyState);
+        if (req.readyState == 4) {
+            console.log(req.status);
+            if (req.status == 200) {
+                console.log("text: " + req.responseText);
+				var data = JSON.parse(req.responseText);
+				var timeAgo = now.getTime() - data.bgs[0].datetime;
+				var timeDeltaMinutes = Math.floor(timeAgo / 60000);
+             	
+				var alert = calculateShareAlert(data.bgs[0].sgv, data.bgs[0].datetime.toString(), options);      
+
+                Pebble.sendAppMessage({
+                    "delta": data.bgs[0].bgdelta.toString() + "mg/dL", 	//str
+                    "egv": data.bgs[0].sgv,		//int	
+                    "trend": data.bgs[0].trend,	//int
+                    "alert": alert,	//int
+                    "vibe": parseInt(options.vibe_temp,10),
+                    "id": data.status[0].now.toString(),
+                    "time_delta_int": timeDeltaMinutes,
+                });
+                options.id = data.status[0].now.toString();
+                window.localStorage.setItem('cgmPebble', JSON.stringify(options));
+            } else {
+
+                Pebble.sendAppMessage({
+                    "delta": 'must code.', 	//str
+                    "egv": 0,		//int	
+                    "trend": 0,	//int
+                    "alert": 4,	//in
+                    "vibe": 1,
+                    "id": id_time,
+                    "time_delta_int": 0,
+                });
+                console.log("first if");
+                console.log(req.status);
+            }
+        } else {
+            console.log("second if");
+        }
+    };
+    req.send(null);
+
+	req.onerror = function () {
+        var now = new Date();
+        var id_time = now.getTime();
+        Pebble.sendAppMessage({
+            "vibe": 1,
+            "egv": 0,
+            "trend": 0,
+            "alert": 4,
+            "delta": "net-err",
+            "id": id_time,
+            "time_delta_int": 0,
+        });
+    };
+   req.ontimeout = function () {
+        var now = new Date();
+        var id_time = now.getTime();
+        Pebble.sendAppMessage({
+            "vibe": 1,
+            "egv": 0,
+            "trend": 0,
+            "alert": 4,
+            "delta": "tout-err",
+            "id": id_time,
+            "time_delta_int": 0,
+        });
+    };
+
+}
+
+
 //using something different? code it up here-------ROGUE-----------------------------//:
 function rogue(options) {
+var response;
+    var req = new XMLHttpRequest();
+    req.open('GET', options.api, true);
 
-}    
+    req.onload = function (e) {
+        console.log(req.readyState);
+        if (req.readyState == 4) {
+            console.log(req.status);
+            if (req.status == 200) {
+                console.log("text: " + req.responseText);
+                response = JSON.parse(req.responseText);
+                options.wt = response[0].datetime;
+                options.egv = response[0].sgv;
+                var alert = 0;
+				var egv = response[0].sgv;
+                if (response[0].noise != "Clean")
+                    egv = response[0].calculatedBg.toString();
+
+                var delta = Math.round(response[0].timesinceread) + " min. ago";
+                if (Math.round(response[0].timesinceread) < 1)
+                    delta = "now";
+                    
+                if  (response[0].trend == 4)
+                     response[0].trend = 0;
+                else if  (response[0].trend < 4)
+                     response[0].trend = response[0].trend + 1;     
+                     
+                var trend = (response[0].trend > 7) ? 0 : response[0].trend;       
+
+                Pebble.sendAppMessage({
+                    "delta": response[0].bgdelta.toString() + "mg/dL", 	//str
+                    "egv": egv,		//int	
+                    "trend": trend,	//int
+                    "alert": alert,	//int
+                    "vibe": parseInt(options.vibe_temp,10),
+                    "id": response[0].id.toString(),
+                    "time_delta_int": Math.floor(response[0].timesinceread),
+                });
+                options.id = response[0].id.toString();
+                window.localStorage.setItem('cgmPebble', JSON.stringify(options));
+            } else {
+                Pebble.sendAppMessage({
+                    "delta": 'must code.', 	//str
+                    "egv": 0,		//int	
+                    "trend": 0,	//int
+                    "alert": 4,	//in
+                    "vibe": 1,
+                    "id": response[0].id.toString(),
+                    "time_delta_int": 0,
+                });
+                console.log("first if");
+                console.log(req.status);
+            }
+        } else {
+            console.log("second if");
+        }
+    };
+    req.send(null);
+}
 
 Pebble.addEventListener("showConfiguration", function () {
-    Pebble.openURL('http://cgmwatch.azurewebsites.net/config.html');
+    Pebble.openURL('http://cgmwatch.azurewebsites.net/config.1.html');
 });
 
 Pebble.addEventListener("webviewclosed", function (e) {
     var options = JSON.parse(decodeURIComponent(e.response));
-    window.localStorage.setItem('cgmPebble', JSON.stringify(options));
+    window.localStorage.setItem('cgmPebble_test', JSON.stringify(options));
     fetchCgmData(99);
 });
 
 Pebble.addEventListener("ready",
     function (e) {
-        var options = JSON.parse(window.localStorage.getItem('cgmPebble')) || 
-        {   'mode': 'Share' ,
-            'high': 180,
-            'low' : 80,
-            'unit': 'mg/dL',
-            'accountName': '',
-            'password': '' ,
-            'api' : '',
-            'vibe' : 1,
-            'id' : 99,
-        };     
-        fetchCgmData(options.id);
+        fetchCgmData(99);
     });
 
 Pebble.addEventListener("appmessage",

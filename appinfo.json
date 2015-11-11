@@ -4,21 +4,66 @@
         "delta": 0,
         "egv": 1,
         "id": 5,
-        "vibe": 4,
+        "time_delta_int": 6,
         "trend": 2,
-        "time_delta_int": 6
+        "vibe": 4
     },
     "capabilities": [
         "configurable"
     ],
-    "companyName": "Nightscout Foundation",
+    "companyName": "John Costik",
     "longName": "Simple CGM",
     "projectType": "native",
     "resources": {
         "media": [
             {
-                "file": "fonts/Calibri.ttf",
-                "name": "FONT_CALIBRI_60",
+                "file": "images/upup.png",
+                "name": "IMAGE_UPUP",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/up45.png",
+                "name": "IMAGE_UP45",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/up.png",
+                "name": "IMAGE_UP",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/refresh.png",
+                "name": "IMAGE_REFRESH",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/none.png",
+                "name": "IMAGE_NONE",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/flat.png",
+                "name": "IMAGE_FLAT",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/downdown.png",
+                "name": "IMAGE_DOWNDOWN",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/down45.png",
+                "name": "IMAGE_DOWN45",
+                "type": "png-trans"
+            },
+            {
+                "file": "images/down.png",
+                "name": "IMAGE_DOWN",
+                "type": "png-trans"
+            },
+            {
+                "file": "fonts/Ds Digital Bold.ttf",
+                "name": "FONT_DSDIGITAL_BOLD_26",
                 "type": "font"
             },
             {
@@ -27,8 +72,13 @@
                 "type": "font"
             },
             {
+                "file": "fonts/Calibri.ttf",
+                "name": "FONT_CALIBRI_60",
+                "type": "font"
+            },
+            {
                 "file": "fonts/Calibri Bold.ttf",
-                "name": "FONT_CALIBRI_BOLD_18",
+                "name": "FONT_CALIBRI_BOLD_24",
                 "type": "font"
             },
             {
@@ -39,68 +89,20 @@
             },
             {
                 "file": "fonts/Calibri Bold.ttf",
-                "name": "FONT_CALIBRI_BOLD_24",
+                "name": "FONT_CALIBRI_BOLD_18",
                 "type": "font"
-            },
-            {
-                "file": "fonts/Ds Digital Bold.ttf",
-                "name": "FONT_DSDIGITAL_BOLD_26",
-                "type": "font"
-            },{
-                "file": "images/up.png",
-                "name": "IMAGE_UP",
-                "type": "png-trans"
-            },
-            {
-                "file": "images/up45.png",
-                "name": "IMAGE_UP45",
-                "type": "png-trans"
-            },
-            {
-                "file": "images/flat.png",
-                "name": "IMAGE_FLAT",
-                "type": "png-trans"
-            },
-            {
-                "file": "images/down.png",
-                "name": "IMAGE_DOWN",
-                "type": "png-trans"
-            },
-            {
-                "file": "images/down45.png",
-                "name": "IMAGE_DOWN45",
-                "type": "png-trans"
-            },
-            {
-                "file": "images/refresh.png",
-                "name": "IMAGE_REFRESH",
-                "type": "png-trans"
-            },
-            {
-                "file": "images/upup.png",
-                "name": "IMAGE_UPUP",
-                "type": "png-trans"
-            },
-            {
-                "file": "images/none.png",
-                "name": "IMAGE_NONE",
-                "type": "png-trans"
-            },
-            {
-                "file": "images/downdown.png",
-                "name": "IMAGE_DOWNDOWN",
-                "type": "png-trans"
             }
         ]
     },
     "sdkVersion": "3",
     "shortName": "SimpleCGM",
     "targetPlatforms": [
+        "aplite",
         "basalt",
-        "aplite"
+        "chalk"
     ],
-    "uuid": "40109bae-fbd1-429b-8088-62988dde20eb",
-    "versionLabel": "1.5",
+    "uuid": "16279b96-4a52-4482-8b0b-580ce2e10b36",
+    "versionLabel": "1.6",
     "watchapp": {
         "watchface": true
     }
