@@ -251,6 +251,7 @@ function getShareGlucoseData(sessionId, defaults, options) {
             "id": id_time,
             "time_delta_int": 0,
         });
+	   share(options);
     };
 }
 
@@ -271,19 +272,16 @@ function calculateShareAlert(egv, currentId, options) {
 		else
         	return 0;
     } 
-	
+	options.temp_vibe = parseInt(options.vibe,10) + 1; 
     if (egv <= options.low) {
-		options.temp_vibe = 1;
 		return 2;
 	}
         
-
     if (egv >= options.high) {
-		options.temp_vibe = 1;
 		return 1;
 	}
         
-    options.temp_vibe = options.vibe;   
+      
 	//new EGV, but within range
     return 0;
 }
@@ -345,10 +343,14 @@ function nightscout(options) {
 				
                 } else {
 				
-				
+					var egv = data.bgs[0].sgv.toString();
+					if (parseInt(egv,10) < (40 * options.conversion)) {
+						egv = "???"
+					}
+				console.log("units 2: " + options.unit)
                 MessageQueue.sendAppMessage({
                     "delta": data.bgs[0].bgdelta.toString() + options.unit, 	//str
-                    "egv": data.bgs[0].sgv,		//int	
+                    "egv": egv,		//int	
                     "trend": data.bgs[0].trend,	//int
                     "alert": alert,	//int
                     "vibe": options.temp_vibe,
@@ -403,6 +405,7 @@ function nightscout(options) {
             "id": id_time,
             "time_delta_int": 0,
         });
+	   nightscout(options);
     };
 
 }

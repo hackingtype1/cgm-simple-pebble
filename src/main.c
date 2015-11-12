@@ -369,7 +369,7 @@ static void process_alert() {
         s_color_channels[1] = 255;
         s_color_channels[2] = 0;
         
-        if (vibe_state > 0)
+        if (vibe_state > 1)
             vibes_double_pulse();
         
         APP_LOG(APP_LOG_LEVEL_DEBUG, "Alert key: %i", OKAY);
@@ -478,7 +478,6 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     //Process Alerts
     process_alert();
     has_launched = 1;
-    accel_tap_service_unsubscribe();
 
 }
 
@@ -531,7 +530,7 @@ static void window_load(Window * window) {
     layer_set_update_proc(s_canvas_layer, update_proc);
     layer_add_child(window_layer, s_canvas_layer);
     
-    icon_layer = bitmap_layer_create(GRect(102 + 20, 67 + offset, 30, 30));
+    icon_layer = bitmap_layer_create(GRect(105 + 20, 67 + offset, 30, 30));
     bitmap_layer_set_background_color(icon_layer, GColorClear);
     bitmap_layer_set_compositing_mode(icon_layer, GCompOpClear);
     layer_add_child(s_canvas_layer, bitmap_layer_get_layer(icon_layer));
@@ -566,7 +565,7 @@ static void window_load(Window * window) {
     layer_set_update_proc(s_canvas_layer, update_proc);
     layer_add_child(window_layer, s_canvas_layer);
     
-    icon_layer = bitmap_layer_create(GRect(102, 67+offset, 30, 30));
+    icon_layer = bitmap_layer_create(GRect(105, 67+offset, 30, 30));
     bitmap_layer_set_background_color(icon_layer, GColorClear);
     bitmap_layer_set_compositing_mode(icon_layer, GCompOpClear);
     layer_add_child(s_canvas_layer, bitmap_layer_get_layer(icon_layer));
@@ -640,25 +639,6 @@ static void hands_update(Animation * anim, AnimationProgress dist_normalized) {
     layer_mark_dirty(s_canvas_layer);
 }
 
-void accel_tap_handler(AccelAxisType axis, int32_t direction) {
-    
-    if (axis == ACCEL_AXIS_X)
-    {
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "X");
-        send_cmd();
-    } else if (axis == ACCEL_AXIS_Y)
-        
-    {
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "Y");
-        send_cmd();
-    } else if (axis == ACCEL_AXIS_Z)
-    {
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "axis: %s", "Z");
-        send_cmd();
-    }
-    
-}
-
 static void init() {
     //srand(time(NULL));    
     time_t t = time(NULL);
@@ -673,8 +653,6 @@ static void init() {
     window_stack_push(s_main_window, true);
     
     tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
-    accel_service_set_sampling_rate(ACCEL_SAMPLING_10HZ);
-    accel_tap_service_subscribe(accel_tap_handler);
     
     // Prepare animations
     AnimationImplementation radius_impl = {
