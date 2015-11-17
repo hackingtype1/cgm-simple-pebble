@@ -28,6 +28,14 @@ function fetchCgmData(id) {
             share(options);
             break;
 			
+		case "Carelink":
+            options.id = id;
+// 			options.accountName = options.accountName_cl;
+// 			options.password = options.password_cl;
+			console.log("carelink mode");
+            carelink(options);
+            break;	
+			
 		case "Unset":
 			Pebble.sendAppMessage({
                 "delta": "settings??",
@@ -42,9 +50,65 @@ function fetchCgmData(id) {
     }
 }
 
-//parse and use standard NS data
-function nightscout(options) {
+var DEFAULT_MAX_RETRY_DURATION = 512;
+//var CARELINK_SECURITY_URL = 'https://carelink.minimed.com/patient/j_security_check';
+var CARELINK_SECURITY_URL = 'https://carelink.minimed.com/patient/main/login.do';
 
+var CARELINK_AFTER_LOGIN_URL = 'https://carelink.minimed.com/patient/main/login.do';
+var CARELINK_JSON_BASE_URL = 'https://carelink.minimed.com/patient/connect/ConnectViewerServlet?cpSerialNumber=NONE&msgType=last24hours&requestTime=';
+var CARELINK_LOGIN_COOKIE = '_WL_AUTHCOOKIE_JSESSIONID';
+
+//parse and use standard Carelink data
+function carelink(options) {
+		
+	var defaults = {
+    jar: true,
+    followRedirect: false,
+    headers: {
+      Host: 'carelink.minimed.com',
+      Connection: 'keep-alive',
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:41.0) Gecko/20100101 Firefox/41.0',
+      'Accept-Encoding': 'gzip,deflate,sdch',
+      'Accept-Language': 'en-US,en;q=0.8'
+    }
+  };
+	var defaults = {
+        'Host': "d89443d2-327c-4a6f-89e5-496bbb0317db"
+        , 'Connection': "Dexcom Share/3.0.2.11 CFNetwork/711.2.23 Darwin/14.0.0"
+        , accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        , 'User-Agent': 'application/json'
+        , LatestGlucose: "https://share1.dexcom.com/ShareWebServices/Services/Publisher/ReadPublisherLatestGlucoseValues"
+    };
+	
+	authenticateCarelink(options);
+
+}
+
+function authenticateCarelink(options){
+	
+    var http = new XMLHttpRequest();
+
+    http.open("POST", CARELINK_SECURITY_URL + '?j_password=' + options.password + '&j_username=', options.accountName);
+	http.setRequestHeader("Host", 'carelink.minimed.com');
+    http.setRequestHeader("Connection", 'keep-alive');
+    http.setRequestHeader('Accept','text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8');
+    http.setRequestHeader("User-Agent", 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:41.0) Gecko/20100101 Firefox/41.0');
+    http.setRequestHeader("Accept-Encoding", 'gzip,deflate,sdch');
+    http.setRequestHeader('Accept-Language', 'en-US,en;q=0.8');
+    
+    http.onload = function (e) { 
+		console.log(http.status);
+		console.log(http.getAllResponseHeaders());
+		var sValue = http._headers['Cookies'];
+		console.log(sValue);
+		var thing = JSON.stringify(http);
+		console.log('made thing');
+		console.log(JSON.stringify(http));      
+    };
+
+    http.send();
+	
 }
 
 //use D's share API------------------------------------------//
@@ -90,7 +154,7 @@ function authenticateShare(options, defaults) {
 
     var http = new XMLHttpRequest();
     var url = defaults.login;
-    http.open("POST", url, true);
+    http.open("POST", url , true);
     http.setRequestHeader("User-Agent", defaults.agent);
     http.setRequestHeader("Content-type", defaults['content-type']);
     http.setRequestHeader('Accept', defaults.accept);
@@ -179,7 +243,8 @@ function getShareGlucoseData(sessionId, defaults, options) {
                     var convertedEgv = (data[0].Value * options.conversion);
                     egv = (convertedEgv < 39) ? parseFloat(Math.round(convertedEgv * 100) / 100).toFixed(1).toString() : convertedEgv.toString();
                     delta = (convertedEgv < 39) ? parseFloat(Math.round(convertedDelta * 100) / 100).toFixed(1) : convertedDelta;
-                    delta = delta.toString() + options.unit;
+                    var deltaString = (delta > 0) ? "+" + delta.toString() : delta.toString();
+					delta = deltaString + options.unit;
                     trend = (data[0].Trend > 7) ? 0 : data[0].Trend;
                 }
                 
@@ -347,9 +412,12 @@ function nightscout(options) {
 					if (parseInt(egv,10) < (40 * options.conversion)) {
 						egv = "???"
 					}
+				
+					var deltaString = data.bgs[0].bgdelta.toString() ? ("+" + data.bgs[0].bgdelta.toString()) : (data.bgs[0].bgdelta.toString());
+					
 				console.log("units 2: " + options.unit)
                 MessageQueue.sendAppMessage({
-                    "delta": data.bgs[0].bgdelta.toString() + options.unit, 	//str
+                    "delta": deltaString + options.unit, 	//str
                     "egv": egv,		//int	
                     "trend": data.bgs[0].trend,	//int
                     "alert": alert,	//int

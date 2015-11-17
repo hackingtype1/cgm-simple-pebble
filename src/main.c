@@ -340,8 +340,13 @@ static void process_alert() {
         text_layer_set_text_color(delta_layer, GColorBlack);
         text_layer_set_text_color(time_delta_layer, GColorBlack);
         bitmap_layer_set_compositing_mode(icon_layer, GCompOpClear);
+#elif PBL_PLATFORM_CHALK
+	 	text_layer_set_text_color(bg_layer, GColorBlack);
+        text_layer_set_text_color(delta_layer, GColorBlack);
+        text_layer_set_text_color(time_delta_layer, GColorBlack);
+        bitmap_layer_set_compositing_mode(icon_layer, GCompOpClear);
 #else
-        text_layer_set_text_color(bg_layer, GColorWhite);
+		text_layer_set_text_color(bg_layer, GColorWhite);
         text_layer_set_text_color(delta_layer, GColorWhite);
         text_layer_set_text_color(time_delta_layer, GColorWhite);
         bitmap_layer_set_compositing_mode(icon_layer, GCompOpOr);
