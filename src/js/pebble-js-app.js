@@ -1,12 +1,12 @@
 function fetchCgmData(id) {
 
     var options = JSON.parse(window.localStorage.getItem('cgmPebble_test')) || 
-        {   'mode': 'Unset',
+        {   'mode': 'Carelink',
             'high': 180,
             'low' : 80,
             'unit': 'mg/dL',
-            'accountName': '',
-            'password': '' ,
+            'accountName': 'kellyhouse2',
+            'password': 'J@brown7' ,
             'api' : '',
             'vibe' : 1
         };
@@ -25,13 +25,12 @@ function fetchCgmData(id) {
 
         case "Share":
             options.id = id;
+            console.log("share mode");
             share(options);
             break;
 			
 		case "Carelink":
             options.id = id;
-// 			options.accountName = options.accountName_cl;
-// 			options.password = options.password_cl;
 			console.log("carelink mode");
             carelink(options);
             break;	
@@ -53,7 +52,6 @@ function fetchCgmData(id) {
 var DEFAULT_MAX_RETRY_DURATION = 512;
 //var CARELINK_SECURITY_URL = 'https://carelink.minimed.com/patient/j_security_check';
 var CARELINK_SECURITY_URL = 'https://carelink.minimed.com/patient/main/login.do';
-
 var CARELINK_AFTER_LOGIN_URL = 'https://carelink.minimed.com/patient/main/login.do';
 var CARELINK_JSON_BASE_URL = 'https://carelink.minimed.com/patient/connect/ConnectViewerServlet?cpSerialNumber=NONE&msgType=last24hours&requestTime=';
 var CARELINK_LOGIN_COOKIE = '_WL_AUTHCOOKIE_JSESSIONID';
@@ -61,35 +59,15 @@ var CARELINK_LOGIN_COOKIE = '_WL_AUTHCOOKIE_JSESSIONID';
 //parse and use standard Carelink data
 function carelink(options) {
 		
-	var defaults = {
-    jar: true,
-    followRedirect: false,
-    headers: {
-      Host: 'carelink.minimed.com',
-      Connection: 'keep-alive',
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:41.0) Gecko/20100101 Firefox/41.0',
-      'Accept-Encoding': 'gzip,deflate,sdch',
-      'Accept-Language': 'en-US,en;q=0.8'
-    }
-  };
-	var defaults = {
-        'Host': "d89443d2-327c-4a6f-89e5-496bbb0317db"
-        , 'Connection': "Dexcom Share/3.0.2.11 CFNetwork/711.2.23 Darwin/14.0.0"
-        , accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-        , 'User-Agent': 'application/json'
-        , LatestGlucose: "https://share1.dexcom.com/ShareWebServices/Services/Publisher/ReadPublisherLatestGlucoseValues"
-    };
-	
 	authenticateCarelink(options);
-
+    
 }
 
 function authenticateCarelink(options){
 	
     var http = new XMLHttpRequest();
 
-    http.open("POST", CARELINK_SECURITY_URL + '?j_password=' + options.password + '&j_username=', options.accountName);
+    http.open("POST", CARELINK_SECURITY_URL + '?j_password=' + options.password + '&j_username=' + options.accountName);
 	http.setRequestHeader("Host", 'carelink.minimed.com');
     http.setRequestHeader("Connection", 'keep-alive');
     http.setRequestHeader('Accept','text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8');
@@ -99,16 +77,33 @@ function authenticateCarelink(options){
     
     http.onload = function (e) { 
 		console.log(http.status);
-		console.log(http.getAllResponseHeaders());
-		var sValue = http._headers['Cookies'];
-		console.log(sValue);
-		var thing = JSON.stringify(http);
-		console.log('made thing');
-		console.log(JSON.stringify(http));      
+		var cookie = http.getResponseHeader("Set-Cookie");  
+        console.log("cookie " + cookie);
+        
+        getCarelinkData(cookie);
     };
 
     http.send();
 	
+}
+
+function getCarelinkData(cookie){
+    var http = new XMLHttpRequest();
+
+    http.open("GET", CARELINK_JSON_BASE_URL + Date.now());
+	http.setRequestHeader("Host", 'carelink.minimed.com');
+    http.setRequestHeader("User-Agent", 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:41.0) Gecko/20100101 Firefox/41.0');
+    http.setRequestHeader("Accept-Encoding", 'gzip,deflate,sdch');
+    http.setRequestHeader('Cookie', cookie);
+    http.setRequestHeader('Content-Type', 'application/json');
+    
+    http.onload = function (e) { 
+        console.log(http.status);
+		console.log("response: " + http.responseBody);	 
+    };
+
+    http.send();
+    
 }
 
 //use D's share API------------------------------------------//
@@ -208,7 +203,7 @@ function getShareGlucoseData(sessionId, defaults, options) {
                     "delta": "data error", 	
                     "egv": "",			
                     "trend": 0,	
-                    "alert": 5,	
+                    "alert": 4,	
                     "vibe": 0,
                     "id": now.getTime(),
                     "time_delta_int": 0,
@@ -231,18 +226,18 @@ function getShareGlucoseData(sessionId, defaults, options) {
                 }
 
                 //Manage HIGH & LOW
-                if (data[0].Value < 40) {
+                if (data[0].Value < 40 * options.conversion) {
                     egv = "low";
                     delta = "check bg";
                     trend = 0;
-                } else if (data[0].Value > 400) {
+                } else if (data[0].Value > 400 * options.conversion) {
                     egv = "hgh";
                     delta = "check bg";
                     trend = 0;
                 } else {
                     var convertedEgv = (data[0].Value * options.conversion);
-                    egv = (convertedEgv < 39) ? parseFloat(Math.round(convertedEgv * 100) / 100).toFixed(1).toString() : convertedEgv.toString();
-                    delta = (convertedEgv < 39) ? parseFloat(Math.round(convertedDelta * 100) / 100).toFixed(1) : convertedDelta;
+                    egv = (convertedEgv < 39 * options.conversion) ? parseFloat(Math.round(convertedEgv * 100) / 100).toFixed(1).toString() : convertedEgv.toString();
+                    delta = (convertedEgv < 39 * options.conversion) ? parseFloat(Math.round(convertedDelta * 100) / 100).toFixed(1) : convertedDelta;
                     var deltaString = (delta > 0) ? "+" + delta.toString() : delta.toString();
 					delta = deltaString + options.unit;
                     trend = (data[0].Trend > 7) ? 0 : data[0].Trend;
@@ -278,10 +273,10 @@ function getShareGlucoseData(sessionId, defaults, options) {
 
         } else {
             MessageQueue.sendAppMessage({
-                "delta": "data error",
+                "delta": "rsp-error",
                 "egv": "",
                 "trend": 0,
-                "alert": 5,
+                "alert": 4,
                 "vibe": 0,
                 "id": now.getTime(),
                 "time_delta_int": 0,
@@ -301,7 +296,7 @@ function getShareGlucoseData(sessionId, defaults, options) {
             "alert": 4,
             "delta": "net-err",
             "id": id_time,
-            "time_delta_int": 0,
+            "time_delta_int": 6,
         });
     };
    http.ontimeout = function () {
@@ -314,7 +309,7 @@ function getShareGlucoseData(sessionId, defaults, options) {
             "alert": 4,
             "delta": "tout-err",
             "id": id_time,
-            "time_delta_int": 0,
+            "time_delta_int": 6,
         });
 	   share(options);
     };
@@ -346,7 +341,6 @@ function calculateShareAlert(egv, currentId, options) {
 		return 1;
 	}
         
-      
 	//new EGV, but within range
     return 0;
 }
@@ -398,7 +392,7 @@ function nightscout(options) {
 					console.log("temp alert: " + temp_alert)
 					MessageQueue.sendAppMessage({
                     "delta": "no data", 	//str
-                    "egv": "old",		//int	
+                    "egv": "old",		//str	
                     "trend": 0,	//int
                     "alert": 4,	//int
                     "vibe": temp_alert,
@@ -409,16 +403,26 @@ function nightscout(options) {
                 } else {
 				
 					var egv = data.bgs[0].sgv.toString();
-					if (parseInt(egv,10) < (40 * options.conversion)) {
-						egv = "???"
-					}
+                    //Manage HIGH & LOW
+                    if (data.bgs[0].sgv <= 39 * options.conversion) {
+                        egv = "low";
+                        delta = "check bg";
+                        trend = 0;
+                    } else if (data.bgs[0].sgv >= 400 * options.conversion) {
+                        egv = "hgh";
+                        delta = "check bg";
+                        trend = 0;
+                    }
+                    if (data.bgs[0].sgv < (30 * options.conversion)) {
+                        egv = "???"
+                    }
 				
 					var deltaString = data.bgs[0].bgdelta.toString() ? ("+" + data.bgs[0].bgdelta.toString()) : (data.bgs[0].bgdelta.toString());
 					
 				console.log("units 2: " + options.unit)
                 MessageQueue.sendAppMessage({
                     "delta": deltaString + options.unit, 	//str
-                    "egv": egv,		//int	
+                    "egv": egv,		//str	
                     "trend": data.bgs[0].trend,	//int
                     "alert": alert,	//int
                     "vibe": options.temp_vibe,
@@ -431,13 +435,13 @@ function nightscout(options) {
             } else {
 
                 MessageQueue.sendAppMessage({
-                    "delta": 'error', 	//str
-                    "egv": 0,		//int	
+                    "delta": 'rsp-err', 	//str
+                    "egv": 0,		//str	
                     "trend": 0,	//int
-                    "alert": 4,	//in
+                    "alert": 4,	//int
                     "vibe": 1,
                     "id": id_time,
-                    "time_delta_int": 0,
+                    "time_delta_int": 6,
                 });
                 console.log("first if");
                 console.log(req.status);
@@ -458,7 +462,7 @@ function nightscout(options) {
             "alert": 4,
             "delta": "net-err",
             "id": id_time,
-            "time_delta_int": 0,
+            "time_delta_int": 6,
         });
     };
    req.ontimeout = function () {
@@ -471,74 +475,10 @@ function nightscout(options) {
             "alert": 4,
             "delta": "tout-err",
             "id": id_time,
-            "time_delta_int": 0,
+            "time_delta_int": 6,
         });
-	   nightscout(options);
     };
 
-}
-
-
-//using something different? code it up here-------ROGUE-----------------------------//:
-function rogue(options) {
-var response;
-    var req = new XMLHttpRequest();
-    req.open('GET', options.api, true);
-
-    req.onload = function (e) {
-        console.log(req.readyState);
-        if (req.readyState == 4) {
-            console.log(req.status);
-            if (req.status == 200) {
-                console.log("text: " + req.responseText);
-                response = JSON.parse(req.responseText);
-                options.wt = response[0].datetime;
-                options.egv = response[0].sgv;
-                var alert = 0;
-				var egv = response[0].sgv;
-                if (response[0].noise != "Clean")
-                    egv = response[0].calculatedBg.toString();
-
-                var delta = Math.round(response[0].timesinceread) + " min. ago";
-                if (Math.round(response[0].timesinceread) < 1)
-                    delta = "now";
-                    
-                if  (response[0].trend == 4)
-                     response[0].trend = 0;
-                else if  (response[0].trend < 4)
-                     response[0].trend = response[0].trend + 1;     
-                     
-                var trend = (response[0].trend > 7) ? 0 : response[0].trend;       
-
-                MessageQueue.sendAppMessage({
-                    "delta": response[0].bgdelta.toString() + "mg/dL", 	//str
-                    "egv": egv,		//int	
-                    "trend": trend,	//int
-                    "alert": alert,	//int
-                    "vibe": parseInt(options.vibe_temp,10),
-                    "id": response[0].id.toString(),
-                    "time_delta_int": Math.floor(response[0].timesinceread),
-                });
-                options.id = response[0].id.toString();
-                window.localStorage.setItem('cgmPebble_test', JSON.stringify(options));
-            } else {
-                Pebble.sendAppMessage({
-                    "delta": 'must code.', 	//str
-                    "egv": 0,		//int	
-                    "trend": 0,	//int
-                    "alert": 4,	//in
-                    "vibe": 1,
-                    "id": response[0].id.toString(),
-                    "time_delta_int": 0,
-                });
-                console.log("first if");
-                console.log(req.status);
-            }
-        } else {
-            console.log("second if");
-        }
-    };
-    req.send(null);
 }
 
 Pebble.addEventListener("showConfiguration", function () {
@@ -554,7 +494,7 @@ Pebble.addEventListener("webviewclosed", function (e) {
 Pebble.addEventListener("ready",
     function (e) {
         var options = JSON.parse(window.localStorage.getItem('cgmPebble_test')) || 
-        {   'mode': 'Share' ,
+        {   'mode': 'Unset' ,
             'high': 180,
             'low' : 80,
             'unit': 'mgdL',

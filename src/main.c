@@ -18,8 +18,9 @@ static Layer * s_canvas_layer;
 
 static GPoint s_center;
 static Time s_last_time, s_anim_time;
-static int s_radius = 0, t_delta = 0, has_launched = 0, vibe_state = 1, alert_state = 0 ,s_anim_hours_60 = 0;
+static int s_radius = 0, t_delta = 6, has_launched = 0, vibe_state = 1, alert_state = 0 ,s_anim_hours_60 = 0;
 static bool s_animating = false;
+static bool s_loading = true;
 
 static GBitmap *icon_bitmap = NULL;
 
@@ -184,11 +185,12 @@ static void clock_refresh(struct tm * tick_time) {
 
 static void tick_handler(struct tm * tick_time, TimeUnits changed) {
     if (!has_launched) {                 
-            snprintf(time_delta_str, 12, "loading");
-            
-            if (time_delta_layer) {
-                text_layer_set_text(time_delta_layer, time_delta_str);
+            //snprintf(time_delta_str, 12, "load...");
+            APP_LOG(APP_LOG_LEVEL_DEBUG, "time delta : %i", t_delta);
+            if (delta_layer) {
+                text_layer_set_text(delta_layer, "load...");
             }
+            
     } else 
     
     if(t_delta > 4) {
