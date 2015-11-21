@@ -1,12 +1,12 @@
 function fetchCgmData(id) {
 
     var options = JSON.parse(window.localStorage.getItem('cgmPebble_test')) || 
-        {   'mode': 'Carelink',
+        {   'mode': 'Unset',
             'high': 180,
             'low' : 80,
             'unit': 'mg/dL',
-            'accountName': 'kellyhouse2',
-            'password': 'J@brown7' ,
+            'accountName': '',
+            'password': '' ,
             'api' : '',
             'vibe' : 1
         };
